@@ -1,0 +1,21 @@
+Electronic Gadgets
+Smartphone,Mobile Communication Device
+Laptop,Portable Computer
+Tablet,Touchscreen Device
+Smartwatch,Wearable Tech
+E-Reader,Digital Book Device
+Bluetooth Speaker,Wireless Audio Device
+Wireless Earbuds,Cord-Free Audio Gear
+Gaming Console,Video Game System
+VR Headset,Virtual Reality Device
+Smart TV,Internet-Connected Television
+Drone,Remote-Controlled Aerial Device
+Digital Camera,Electronic Photography Device
+Action Camera,Compact Adventure Camera
+External Hard Drive,Portable Data Storage
+Smart Home Hub,Voice-Controlled Assistant
+Mechanical Keyboard,Tactile Typing Device
+Portable Power Bank,Rechargeable Battery Pack
+Fitness Tracker,Health Monitoring Device
+Streaming Stick,Plug-and-Play Media Player
+3D Printer,Additive Manufacturing Device
