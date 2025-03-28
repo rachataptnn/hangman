@@ -1,0 +1,16 @@
+Clothes  
+Shirt,Upper Body Wear  
+T-Shirt,Casual Top  
+Jeans,Denim Pants  
+Shorts,Knee-Length Pants  
+Jacket,Outerwear  
+Coat,Long Outerwear  
+Sweater,Warm Knitwear  
+Hoodie,Jacket with a Hood  
+Socks,Foot Cover  
+Shoes,Footwear  
+Sneakers,Sport Shoes  
+Cap,Short-Brimmed Hat  
+Gloves,Hand Cover  
+Scarf,Neck Warmer  
+Belt,Waist Accessory  

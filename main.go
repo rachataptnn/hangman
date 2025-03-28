@@ -5,8 +5,8 @@ import (
 )
 
 func main() {
-	wordsDirectory := "./words/"
-	hangman := hangman.New(wordsDirectory)
+	wordsSrcDir := "./words/"
+	hangman := hangman.New(wordsSrcDir)
 	hangman.PrepareWordCategories()
 	hangman.StartGame()
 }
