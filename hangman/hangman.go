@@ -220,11 +220,10 @@ func (h *hangman) guess() bool {
 			h.IncorrectGuesses++
 			h.IncorrectLetters = append(h.IncorrectLetters, letter)
 
-			drawHangman(h.IncorrectGuesses)
+			h.drawHangman()
 			h.showRoundSummary()
 
 			if h.IncorrectGuesses == chances {
-				fmt.Println("Game Over!")
 				return false
 			}
 		}
@@ -248,57 +247,13 @@ func (h *hangman) checkWholeWord(letter string) bool {
 	h.Score -= 20
 
 	h.showRoundSummary()
-	drawHangman(h.IncorrectGuesses)
+	h.drawHangman()
 
 	return false
 }
 
-func selectCategory(wcs []WordCategory) int {
-	printWithPadding("Select Category:")
-	for i, wc := range wcs {
-		fmt.Printf("%d. %s\n", i+1, wc.Name)
-	}
-	fmt.Println("")
-
-	var categoryNumber int
-	for categoryNumber <= 0 || categoryNumber > len(wcs) {
-		fmt.Print("Enter Category Number: ")
-		fmt.Scanln(&categoryNumber)
-
-		if categoryNumber < 0 || categoryNumber > len(wcs) {
-			fmt.Println("Invalid Category Number")
-		} else {
-			fmt.Println("You choose: ", wcs[categoryNumber-1].Name)
-		}
-	}
-
-	return categoryNumber
-}
-
-func readLetter() string {
-	fmt.Printf("\nlet's guess: ")
-
-	reader := bufio.NewReader(os.Stdin)
-	letter, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("An error occurred while reading the input:" + err.Error())
-		os.Exit(1)
-	}
-
-	if len(letter) < 1 {
-		return ""
-	}
-
-	letterWithOutNewLine := strings.ToLower(letter[:len(letter)-1])
-	return letterWithOutNewLine
-}
-
-func printWithPadding(msg string) {
-	fmt.Printf("\n%s\n\n", msg)
-}
-
-func drawHangman(left int) {
-	switch left {
+func (h *hangman) drawHangman() {
+	switch h.IncorrectGuesses {
 	case 0:
 		fmt.Println(` +---+
  |   |
@@ -356,4 +311,48 @@ func drawHangman(left int) {
      |
 ======`)
 	}
+}
+
+func selectCategory(wcs []WordCategory) int {
+	printWithPadding("Select Category:")
+	for i, wc := range wcs {
+		fmt.Printf("%d. %s\n", i+1, wc.Name)
+	}
+	fmt.Println("")
+
+	var categoryNumber int
+	for categoryNumber <= 0 || categoryNumber > len(wcs) {
+		fmt.Print("Enter Category Number: ")
+		fmt.Scanln(&categoryNumber)
+
+		if categoryNumber < 0 || categoryNumber > len(wcs) {
+			fmt.Println("Invalid Category Number")
+		} else {
+			fmt.Println("You choose: ", wcs[categoryNumber-1].Name)
+		}
+	}
+
+	return categoryNumber
+}
+
+func readLetter() string {
+	fmt.Printf("\nlet's guess: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	letter, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("An error occurred while reading the input:" + err.Error())
+		os.Exit(1)
+	}
+
+	if len(letter) < 1 {
+		return ""
+	}
+
+	letterWithOutNewLine := strings.ToLower(letter[:len(letter)-1])
+	return letterWithOutNewLine
+}
+
+func printWithPadding(msg string) {
+	fmt.Printf("\n%s\n\n", msg)
 }
