@@ -8,23 +8,37 @@ import (
 	"strings"
 )
 
+const (
+	Rules = `
+=====
+Rules 
+=====
+1. You have 6 chances to guess the word
+2. You can guess one letter at a time
+3. You can guess the whole word at once by entering more than one letter`
+)
+
 type Hangman interface {
 	PrepareWordCategories() error
 	StartGame()
 }
 
-func New(wordsDirectory string) Hangman {
+func New(wordsSrcDir string) Hangman {
 	return &hangman{
-		wordsDirectory: wordsDirectory,
+		WordsDirectory:   wordsSrcDir,
+		Score:            0,
+		IncorrectGuesses: 0,
 	}
 }
 
 type hangman struct {
-	wordsDirectory   string
+	WordsDirectory   string
 	WordCategories   []WordCategory
 	SelectedCategory int
-	TargetWord       word
-	GuessedLetters   []string
+	TargetWord       string
+	DisplayWord      string
+	Score            int
+	IncorrectGuesses int
 }
 
 type WordCategory struct {
@@ -38,7 +52,7 @@ type word struct {
 }
 
 func (h *hangman) PrepareWordCategories() error {
-	entries, err := os.ReadDir(h.wordsDirectory)
+	entries, err := os.ReadDir(h.WordsDirectory)
 	if err != nil {
 		return err
 	}
@@ -58,7 +72,7 @@ func (h *hangman) PrepareWordCategories() error {
 }
 
 func (h *hangman) prepareWordCategory(fileName string) (WordCategory, error) {
-	fileContent, err := os.OpenFile(h.wordsDirectory+fileName, os.O_RDONLY, 0)
+	fileContent, err := os.OpenFile(h.WordsDirectory+fileName, os.O_RDONLY, 0)
 	if err != nil {
 		return WordCategory{}, err
 	}
@@ -92,22 +106,33 @@ func (h *hangman) prepareWordCategory(fileName string) (WordCategory, error) {
 
 func (h *hangman) StartGame() {
 	categoryNumber := selectCategory(h.WordCategories)
-
 	category := h.WordCategories[categoryNumber-1]
-	word := category.Words[rand.Intn(len(category.Words))]
 
-	fmt.Println("Hint: ", word.Hint)
-	fmt.Println("")
+	targetWord := category.Words[rand.Intn(len(category.Words))]
+	h.TargetWord = strings.ToLower(targetWord.Word)
 
-	isWin, score := guess(word)
+	fmt.Println(Rules)
+	printWithPadding("GAME STARTED!! Hint: " + targetWord.Hint)
+
+	h.initDisplayWord()
+	h.showRoundSummary()
+
+	isWin := h.guess()
 	if isWin {
 		fmt.Println("Congratulations! You found the word!")
-		fmt.Println("your score: ", score)
+		fmt.Println("your score: ", h.Score)
+	} else {
+		fmt.Println("Game Over! The word was: ", targetWord.Word)
+		fmt.Println("your score: ", h.Score)
 	}
 
 	var playAgain string
-	fmt.Println("Wanna play again? Y/n")
+	printWithPadding("Wanna play again? Y/n")
 	fmt.Scanln(&playAgain)
+	for strings.ToLower(playAgain) != "y" || strings.ToLower(playAgain) != "n" {
+		fmt.Println("Invalid input. Please enter Y or n")
+		fmt.Scanln(&playAgain)
+	}
 	if strings.ToLower(playAgain) == "y" {
 		h.StartGame()
 	}
@@ -115,8 +140,109 @@ func (h *hangman) StartGame() {
 	fmt.Println("Goodbye!")
 }
 
+func (h *hangman) initDisplayWord() {
+	for _, v := range h.TargetWord {
+		if v == ' ' {
+			h.DisplayWord += " "
+		} else {
+			h.DisplayWord += "_"
+		}
+	}
+}
+
+func (h *hangman) updateDisplayWord(letter string, n int) {
+	for i := 0; i < n; i++ {
+		if h.TargetWord[i] == letter[0] && h.DisplayWord[i] == '_' {
+			h.DisplayWord = h.DisplayWord[:i] + string(letter) + h.DisplayWord[i+1:]
+		}
+	}
+}
+
+func (h *hangman) showRoundSummary() {
+	spacedDisplayWord := strings.Join(strings.Split(h.DisplayWord, ""), " ")
+	fmt.Printf("\n%s	score: %d, incorrect guess: %d\n\n", spacedDisplayWord, h.Score, h.IncorrectGuesses)
+}
+
+func (h *hangman) guess() bool {
+	correctCount := 0
+	targetWorldLength := len(h.TargetWord)
+	usedLetters := make(map[string]bool)
+
+	for h.IncorrectGuesses < 6 && correctCount != targetWorldLength {
+		letter := readLetter()
+		if len(letter) < 1 {
+			fmt.Println("Please enter at least one letter")
+			continue
+		}
+
+		letter = strings.ToLower(letter)
+		if len(letter) > 1 {
+			isWin := h.checkWholeWord(letter)
+			if isWin {
+				return true
+			}
+
+			continue
+		}
+
+		_, ok := usedLetters[letter]
+		if ok {
+			fmt.Printf("You already guessed this letter, try another one\n\n")
+			continue
+		}
+
+		usedLetters[letter] = true
+		if strings.Contains(h.TargetWord, letter) {
+			fmt.Println("Correct!")
+
+			correctCount += 1
+			h.Score += 10
+
+			h.updateDisplayWord(letter, targetWorldLength)
+			h.showRoundSummary()
+
+		} else {
+			fmt.Println("WRONG")
+
+			h.IncorrectGuesses++
+			drawHangman(h.IncorrectGuesses)
+			h.showRoundSummary()
+
+			if h.IncorrectGuesses == 6 {
+				fmt.Println("Game Over!")
+				fmt.Println("Word: ", h.TargetWord)
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (h *hangman) checkWholeWord(letter string) bool {
+	printWithPadding("!! YOU GUESS THE WHOLE WORD !!")
+
+	if letter == h.TargetWord {
+		fmt.Println("wow! you found the word! (score is increased by 20000)")
+
+		h.Score += 20000
+		h.showRoundSummary()
+
+		return true
+	}
+
+	fmt.Println("Nice try... but not this Word. (score is decreased by 20)")
+
+	h.IncorrectGuesses++
+	h.Score -= 20
+
+	h.showRoundSummary()
+	// drawHangman(10 - incorrectGuessLimit)
+	return false
+}
+
 func selectCategory(wcs []WordCategory) int {
-	fmt.Println("Select Category:")
+	printWithPadding("Select Category:")
 	for i, wc := range wcs {
 		fmt.Printf("%d. %s\n", i+1, wc.Name)
 	}
@@ -129,190 +255,106 @@ func selectCategory(wcs []WordCategory) int {
 
 		if categoryNumber < 0 || categoryNumber > len(wcs) {
 			fmt.Println("Invalid Category Number")
+		} else {
+			fmt.Println("You choose: ", wcs[categoryNumber-1].Name)
 		}
 	}
 
 	return categoryNumber
 }
 
-func guess(word word) (bool, int) {
-	incorrectGuessLimit := 10
-	score := 0
-
-	process := ""
-	n := len(word.Word)
-	for _, v := range word.Word {
-		if v == ' ' {
-			process += " "
-		} else {
-			process += "_"
-		}
-
-	}
-	showProcess(process, n, incorrectGuessLimit)
-
-	lowerWord := strings.ToLower(word.Word)
-	correctCount := 0
-	for incorrectGuessLimit > 0 && correctCount != n {
-		// var letter string
-		// fmt.Print("Enter a letter: ")
-		// fmt.Scanln(&letter)
-
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter a string: ")
-		letter, err := reader.ReadString('\n') // Reads input until a newline character
-		if err != nil {
-			fmt.Println(err)
-			return false, score
-		}
-
-		letter = letter[:len(letter)-1]
-		fmt.Println("You entered:", letter)
-
-		letter = strings.ToLower(letter)
-
-		if len(letter) > 1 {
-
-			fmt.Println("")
-			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			fmt.Println("!! YOU GUESS THE WHOLE WORD !!")
-			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			fmt.Println("")
-
-			if letter == lowerWord {
-				score += 20000
-				showProcess(lowerWord, score, incorrectGuessLimit)
-				return true, score
-			} else {
-				fmt.Printf("letter <%s>", letter)
-				fmt.Printf("word <%s>", lowerWord)
-
-				fmt.Println("Incorrect Word, score is decreased by 20")
-				incorrectGuessLimit -= 1
-				score -= 20
-				showProcess(process, score, incorrectGuessLimit)
-				// drawHangman(10 - incorrectGuessLimit)
-			}
-			continue
-		}
-
-		if strings.Contains(lowerWord, letter) {
-			fmt.Println("")
-			fmt.Println("Correct Letter!")
-			fmt.Println("")
-
-			correctCount += 1
-			score += 10
-			process = updateProcess(lowerWord, process, letter, n)
-			showProcess(process, score, incorrectGuessLimit)
-
-		} else {
-			fmt.Println("")
-			fmt.Println("Incorrect Letter~")
-			fmt.Println("")
-
-			incorrectGuessLimit--
-			showProcess(process, score, incorrectGuessLimit)
-			// drawHangman(10 - incorrectGuessLimit)
-
-			if incorrectGuessLimit == 0 {
-				fmt.Println("Game Over!")
-				fmt.Println("Word: ", lowerWord)
-				return false, score
-			}
-		}
+func readLetter() string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("let's guess: ")
+	letter, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("An error occurred while reading the input:" + err.Error())
+		os.Exit(1)
 	}
 
-	return true, score
-}
-
-func showProcess(process string, score, incorrectGuessLimit int) {
-	spacedProcess := strings.Join(strings.Split(process, ""), " ")
-	fmt.Printf("%s	score:%d remaining incorrect guess:%d\n", spacedProcess, score, incorrectGuessLimit)
-}
-
-func updateProcess(word, process, letter string, n int) string {
-	for i := 0; i < n; i++ {
-		if word[i] == letter[0] && process[i] == '_' {
-			process = process[:i] + string(letter) + process[i+1:]
-			// break
-		}
+	if len(letter) < 1 {
+		return ""
 	}
 
-	return process
+	letterWithOutNewLine := strings.ToLower(letter[:len(letter)-1])
+	return letterWithOutNewLine
 }
 
-// func drawHangman(left int) {
-// 	switch left {
-// 	case 0:
-// 		fmt.Println(`
-// +---+
-// |   |
-//     |
-//     |
-//     |
-//     |
-// ======
-// `)
-// 	case 1:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-//     |
-//     |
-//     |
-// ======
-// `)
-// 	case 2:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-// |   |
-//     |
-//     |
-// ======
-// `)
-// 	case 3:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-// /|   |
-//     |
-//     |
-// ======
-// `)
-// 	case 4:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-// /|\  |
-//     |
-//     |
-// ======
-// `)
-// 	case 5:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-// /|\  |
-// /    |
-//     |
-// ======
-// `)
-// 	case 6:
-// 		fmt.Println(`
-// +---+
-// |   |
-// O   |
-// /|\  |
-// / \  |
-//     |
-// ======
-// `)
-// 	}
-// }
+func printWithPadding(msg string) {
+	fmt.Printf("\n%s\n\n", msg)
+}
+
+func drawHangman(left int) {
+	switch left {
+	case 0:
+		fmt.Println(`
+ +---+
+ |   |
+     |
+     |
+     |
+     |
+======
+`)
+	case 1:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+     |
+     |
+     |
+======
+`)
+	case 2:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+ |   |
+     |
+     |
+======
+`)
+	case 3:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+/|   |
+     |
+     |
+======
+`)
+	case 4:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+/|\  |
+     |
+     |
+======
+`)
+	case 5:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+/|\  |
+/    |
+     |
+======
+`)
+	case 6:
+		fmt.Println(`
+ +---+
+ |   |
+ O   |
+/|\  |
+/ \  |
+     |
+======
+`)
+	}
+}
