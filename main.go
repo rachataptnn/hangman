@@ -100,6 +100,7 @@ func hangman(wcs []WordCategory) {
 		fmt.Println("your score: ", score)
 	}
 
+	// TODO: implement play again
 }
 
 func selectCategory(wcs []WordCategory) int {
@@ -122,8 +123,9 @@ func selectCategory(wcs []WordCategory) int {
 	return categoryNumber
 }
 
-func guess(word word) (isPass bool, score int) {
+func guess(word word) (bool, int) {
 	incorrectGuessLimit := 10
+	score := 0
 
 	process := ""
 	n := len(word.Word)
@@ -137,27 +139,59 @@ func guess(word word) (isPass bool, score int) {
 	}
 	showProcess(process, n, incorrectGuessLimit)
 
+	lowerWord := strings.ToLower(word.Word)
 	correctCount := 0
 	for incorrectGuessLimit > 0 && correctCount != n {
-		var letter string
-		fmt.Print("Enter a letter: ")
-		fmt.Scanln(&letter)
+		// var letter string
+		// fmt.Print("Enter a letter: ")
+		// fmt.Scanln(&letter)
 
-		if len(letter) != 1 {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter a string: ")
+		letter, err := reader.ReadString('\n') // Reads input until a newline character
+		if err != nil {
+			fmt.Println(err)
+			return false, score
+		}
+
+		letter = letter[:len(letter)-1]
+		fmt.Println("You entered:", letter)
+
+		letter = strings.ToLower(letter)
+
+		if len(letter) > 1 {
+
 			fmt.Println("")
-			fmt.Println("Invalid Letter")
+			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+			fmt.Println("!! YOU GUESS THE WHOLE WORD !!")
+			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			fmt.Println("")
+
+			if letter == lowerWord {
+				score += 20000
+				showProcess(lowerWord, score, incorrectGuessLimit)
+				return true, score
+			} else {
+				fmt.Printf("letter <%s>", letter)
+				fmt.Printf("word <%s>", lowerWord)
+
+				fmt.Println("Incorrect Word, score is decreased by 20")
+				incorrectGuessLimit -= 1
+				score -= 20
+				showProcess(process, score, incorrectGuessLimit)
+				drawHangman(10 - incorrectGuessLimit)
+			}
 			continue
 		}
 
-		if strings.Contains(word.Word, letter) {
+		if strings.Contains(lowerWord, letter) {
 			fmt.Println("")
 			fmt.Println("Correct Letter!")
 			fmt.Println("")
 
 			correctCount += 1
 			score += 10
-			process = updateProcess(word.Word, process, letter, n)
+			process = updateProcess(lowerWord, process, letter, n)
 			showProcess(process, score, incorrectGuessLimit)
 
 		} else {
@@ -167,10 +201,11 @@ func guess(word word) (isPass bool, score int) {
 
 			incorrectGuessLimit--
 			showProcess(process, score, incorrectGuessLimit)
+			drawHangman(10 - incorrectGuessLimit)
 
 			if incorrectGuessLimit == 0 {
 				fmt.Println("Game Over!")
-				fmt.Println("Word: ", word.Word)
+				fmt.Println("Word: ", lowerWord)
 				return false, score
 			}
 		}
@@ -180,16 +215,92 @@ func guess(word word) (isPass bool, score int) {
 }
 
 func showProcess(process string, score, incorrectGuessLimit int) {
-	fmt.Printf("%s	score:%d remaining incorrect guess:%d\n", process, score, incorrectGuessLimit)
+	spacedProcess := strings.Join(strings.Split(process, ""), " ")
+	fmt.Printf("%s	score:%d remaining incorrect guess:%d\n", spacedProcess, score, incorrectGuessLimit)
 }
 
 func updateProcess(word, process, letter string, n int) string {
 	for i := 0; i < n; i++ {
 		if word[i] == letter[0] && process[i] == '_' {
 			process = process[:i] + string(letter) + process[i+1:]
-			break
+			// break
 		}
 	}
 
 	return process
+}
+
+func drawHangman(left int) {
+	switch left {
+	case 0:
+		fmt.Println(`
++---+
+|   |
+    |
+    |
+    |
+    |
+======
+`)
+	case 1:
+		fmt.Println(`
++---+
+|   |
+O   |
+    |
+    |
+    |
+======
+`)
+	case 2:
+		fmt.Println(`
++---+
+|   |
+O   |
+|   |
+    |
+    |
+======
+`)
+	case 3:
+		fmt.Println(`
++---+
+|   |
+O   |
+/|   |
+    |
+    |
+======
+`)
+	case 4:
+		fmt.Println(`
++---+
+|   |
+O   |
+/|\  |
+    |
+    |
+======
+`)
+	case 5:
+		fmt.Println(`
++---+
+|   |
+O   |
+/|\  |
+/    |
+    |
+======
+`)
+	case 6:
+		fmt.Println(`
++---+
+|   |
+O   |
+/|\  |
+/ \  |
+    |
+======
+`)
+	}
 }
