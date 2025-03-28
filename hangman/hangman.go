@@ -42,6 +42,7 @@ type hangman struct {
 	LetterToGuess    int
 	CorrectGuesses   int
 	IncorrectGuesses int
+	IncorrectLetters []string
 	Score            int
 }
 
@@ -171,6 +172,10 @@ func (h *hangman) updateDisplayWord(letter string) {
 func (h *hangman) showRoundSummary() {
 	spacedDisplayWord := strings.Join(strings.Split(h.DisplayWord, ""), " ")
 	fmt.Printf("\n%s	score: %d, incorrect guess: %d\n\n", spacedDisplayWord, h.Score, h.IncorrectGuesses)
+
+	if len(h.IncorrectLetters) > 0 {
+		fmt.Printf("Incorrect Letters: %s\n", strings.Join(h.IncorrectLetters, ", "))
+	}
 }
 
 func (h *hangman) guess() bool {
@@ -213,6 +218,8 @@ func (h *hangman) guess() bool {
 
 			h.Score -= 5
 			h.IncorrectGuesses++
+			h.IncorrectLetters = append(h.IncorrectLetters, letter)
+
 			drawHangman(h.IncorrectGuesses)
 			h.showRoundSummary()
 
@@ -269,7 +276,7 @@ func selectCategory(wcs []WordCategory) int {
 }
 
 func readLetter() string {
-	fmt.Printf("let's guess: ")
+	fmt.Printf("\nlet's guess: ")
 
 	reader := bufio.NewReader(os.Stdin)
 	letter, err := reader.ReadString('\n')
